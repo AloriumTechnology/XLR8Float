@@ -1,8 +1,9 @@
 #include <XLR8Float.h>
 
 /* XLR8FloatTest
- by Matt Weber (linkedin.com/in/mattweber0)
- Alorium Technology
+ Copyright (c) 2016 Alorim Technology.  All right reserved.
+ Written by Matt Weber (linkedin.com/in/mattweberdesign) of
+ Alorium Technology (info@aloriumtech.com)
  Demonstrates usage of XLR8Float library and
   hardware accelerators
  Loops through random numbers and updates statistics
@@ -42,13 +43,8 @@ void setup() {
   Serial.begin(115200);
   //Serial.begin(9600);
 
-  // if analog input pin 0 is unconnected, random analog
-  // noise will cause the call to randomSeed() to generate
-  // different seed numbers each time the sketch runs.
-  // randomSeed() will then shuffle the random function.
-  randomSeed(analogRead(0));
-  // if want repeatable results, instead use
-  //randomSeed(1);
+  // Different random seeds
+  randomSeed(1);
   
   // Shut off interrupts (timer used for micros() and millis())
   //  so they don't affect the runtimes being measured
@@ -64,8 +60,8 @@ void setup() {
 
 void loop() {
   // Generate 16 bit signed integer random number centered on zero
-  //randNumber = (int)random(-32767,32767);
-  randNumber = (int)random(-255,255); // use smaller range to drive the mean closer to zero
+  randNumber = (int)random(-32767,32767);
+  //randNumber = (int)random(-32,32); // use smaller range to drive the mean closer to zero
   // Incorporate this number into the statistics
   //  using both XLR8 and standard routines. Both
   //  should give the same result
@@ -81,6 +77,7 @@ void loop() {
   if (stats_float.mean != stats_xlr8.mean) {printMismatch = true;}
   if (stats_float.M2 != stats_xlr8.M2) {printMismatch = true;}
   if (printMismatch) {
+    GPIOR1 = 0x80; // flag to finish with failure 
     Serial.println("MISMATCH    xlr8    expected");
     Serial.print("  count  ");Serial.print(stats_xlr8.count);Serial.print("  ");Serial.println(stats_float.count);
     Serial.print("  min    ");Serial.print(stats_xlr8.minimum);Serial.print("  ");Serial.println(stats_float.minimum);
@@ -93,23 +90,35 @@ void loop() {
   update_stats_xlr8(runtimeXLR8,&runstats_xlr8);
   // Periodically print runtime statistics to serial
   if (!(runstats_float.count & 0xFFF)) {
-//    Serial.println("CHECKPOINT xlr8    expected");
-//    Serial.print("  count  ");Serial.print(stats_xlr8.count);Serial.print("  ");Serial.println(stats_float.count);
-//    Serial.print("  min    ");Serial.print(stats_xlr8.minimum);Serial.print("  ");Serial.println(stats_float.minimum);
-//    Serial.print("  max    ");Serial.print(stats_xlr8.maximum);Serial.print("  ");Serial.println(stats_float.maximum);
-//    Serial.print("  mean   ");Serial.print(stats_xlr8.mean);Serial.print("  ");Serial.println(stats_float.mean);
-//    Serial.print("  M2     ");Serial.print(stats_xlr8.M2);Serial.print("  ");Serial.println(stats_float.M2);
-//    float xlr8stddevx = sqrt(stats_xlr8.M2/((float)stats_xlr8.count - 1));
-//    float floatstddevx = sqrt(stats_float.M2/((float)stats_float.count - 1));
-//    Serial.print("  stddev   ");Serial.print(xlr8stddevx);Serial.print("    ");Serial.println(floatstddevx);    
-    Serial.println("RUNTIME    xlr8     software");
-    Serial.print("  count     ");Serial.print(runstats_xlr8.count);Serial.print("  ");Serial.println(runstats_float.count);
-    Serial.print("  min         ");Serial.print(runstats_xlr8.minimum);Serial.print("     ");Serial.println(runstats_float.minimum);
-    Serial.print("  max         ");Serial.print(runstats_xlr8.maximum);Serial.print("     ");Serial.println(runstats_float.maximum);
-    Serial.print("  mean        ");Serial.print(runstats_xlr8.mean);Serial.print("  ");Serial.println(runstats_float.mean);
+    GPIOR1 = (GPIOR1 == 0) ? 0xC0 : 0x80; // finish flag with either pass or fail status
+    Serial.println("RUNTIME (clocks)    xlr8     software");
+    Serial.print("     count          ");Serial.print(runstats_xlr8.count);Serial.print("    ");Serial.println(runstats_float.count);
+    Serial.print("     min              ");Serial.print(runstats_xlr8.minimum);Serial.print("     ");Serial.println(runstats_float.minimum);
+    Serial.print("     max              ");Serial.print(runstats_xlr8.maximum);Serial.print("     ");Serial.println(runstats_float.maximum);
+    Serial.print("     mean             ");Serial.print(runstats_xlr8.mean);Serial.print("  ");Serial.println(runstats_float.mean);
+    //Serial.print("     M2             ");Serial.print(runstats_xlr8.M2);Serial.print("  ");Serial.println(runstats_float.M2);
     float xlr8stddev = sqrt(runstats_xlr8.M2/((float)runstats_xlr8.count - 1));
     float floatstddev = sqrt(runstats_float.M2/((float)runstats_float.count - 1));
-    Serial.print("  stddev        ");Serial.print(xlr8stddev);Serial.print("    ");Serial.println(floatstddev);    
+    Serial.print("     stddev             ");Serial.print(xlr8stddev);Serial.print("    ");Serial.println(floatstddev);    
+  }
+  if (runstats_xlr8.count >= 65536) {
+    Serial.println("Random Number Statistics");
+    Serial.print("  count          ");Serial.println(stats_xlr8.count);//Serial.print("  ");Serial.println(stats_float.count);
+    Serial.print("  min           ");Serial.println(stats_xlr8.minimum);//Serial.print("  ");Serial.println(stats_float.minimum);
+    Serial.print("  max            ");Serial.println(stats_xlr8.maximum);//Serial.print("  ");Serial.println(stats_float.maximum);
+    Serial.print("  mean           ");Serial.println(stats_xlr8.mean);//Serial.print("  ");Serial.println(stats_float.mean);
+    //Serial.print("  M2           ");Serial.println(stats_xlr8.M2);//Serial.print("  ");Serial.println(stats_float.M2);
+    float xlr8stddevx = sqrt(stats_xlr8.M2/((float)stats_xlr8.count - 1));
+    float floatstddevx = sqrt(stats_float.M2/((float)stats_float.count - 1));
+    Serial.print("  stddev         ");Serial.println(xlr8stddevx);//Serial.print("    ");Serial.println(floatstddevx);
+    // Expected stddev for a uniform distribution is sqrt( ((range+1)^2 - 1)/12 ) , with a large range this is roughly range/sqrt(12)
+    Serial.println();
+    Serial.print("XLR8 Floating Point measured ");
+    float speedup = runstats_float.mean/runstats_xlr8.mean;
+    Serial.print(speedup);
+    Serial.println(" times faster than ordinary Arduino Floating Point");
+    Serial.flush();
+    while (1); // stop here
   }
 }
 
@@ -122,8 +131,8 @@ int update_stats_float (int newval, struct statistics* stats) {
   if (newval > stats->maximum) {stats->maximum = newval;}
   if (newval < stats->minimum) {stats->minimum = newval;}
   stats->count++; 
-  x = (float)newval;
   TCNT1 = 0; // reset timer if want to measure just the floating point time
+  x = (float)newval;
   delta1 = x - stats->mean; 
   temp   = delta1/(float)stats->count;
   stats->mean   = temp + stats->mean;
@@ -140,8 +149,8 @@ int update_stats_xlr8 (int newval, struct statistics* stats) {
   if (newval > stats->maximum) {stats->maximum = newval;}
   if (newval < stats->minimum) {stats->minimum = newval;}
   stats->count++;
-  x = (float)newval;
   TCNT1 = 0; // reset timer if want to measure just the floating point time
+  x = xlr8FloatFromInt(newval);
   delta1   = xlr8FloatSub(x,stats->mean);       // d1=x-mean
   temp     = xlr8FloatDiv(delta1,(float)stats->count); // t = d1/n 
   stats->mean     = xlr8FloatAdd(temp,stats->mean);    // mean=t+mean
