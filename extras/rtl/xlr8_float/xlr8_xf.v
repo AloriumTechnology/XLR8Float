@@ -222,15 +222,17 @@ module xlr8_xf #(
                      r2_re     ||
                      r3_re;
 
-  always@(posedge cp2 or negedge ireset)
-     begin: ctrlreg
-        if (!ireset) begin
-           ctrl_reg <= 8'h00;
-        end
-        else begin
-           ctrl_reg <= (ctrl_we) ? dbus_in : ctrl_reg;
-        end
-     end
+   always@(posedge cp2 or negedge ireset) begin: ctrlreg
+      if (!ireset) begin
+         ctrl_reg <= 8'h00;
+      end
+      else begin
+         // We are now using ctrl_reg[7] in the C library to trick the
+         // compiler, so we never want bit 7 to get set. See the
+         // XLR8Float.cpp file for details on the compiler trick
+         ctrl_reg <= (ctrl_we) ? {1'b0, dbus_in[6:0]} : ctrl_reg;
+      end
+   end
    
    assign current_cmd = (ctrl_we) ? dbus_in[2:0] : ctrl_reg[2:0];
    assign function_start = ctrl_we & (dbus_in[6] == 1'b1);
@@ -366,29 +368,3 @@ module xlr8_xf #(
    
 endmodule 
 
-
-
-//               parameter logic [2:0] STGI_XF_CMD [7:0] = '{3'h0,
-//                                                           3'h1,
-//                                                           3'h2,
-//                                                           3'h3,
-//                                                           3'h4,
-//                                                           3'h5,
-//                                                           3'h6,
-//                                                           3'h7},
-                                                
-//               parameter logic [7:0] STGI_XF_LATENCY [7:0] = '{8'hff, // Compare
-//                                                               8'h02, // Add
-//                                                               8'h02, // Sub
-//                                                               8'h03, // Mult
-//                                                               8'h0d, // Divide
-//                                                               8'hff, // Square Root
-//                                                               8'hff, // Convert to Float
-//                                                               8'hff} // Convert to Fixed
-                                                    
-//      for (int i = 0; i <=7; i++) begin
-//       port_complete[i] = (((STGI_XF_PRELOAD_DELTA >= STGI_XF_LATENCY[i])
-//                         && function_start) ||
-//                         (result_tc == STGI_XF_LATENCY[i])) && 
-//                          (current_cmd == STGI_XF_CMD[i]);
-//      end // for 

@@ -1,7 +1,7 @@
 #include <XLR8Float.h>
 
 /* XLR8FloatTest
- Copyright (c) 2016 Alorim Technology.  All right reserved.
+ Copyright (c) 2016 Alorium Technology.  All right reserved.
  Written by Matt Weber (support@aloriumtech.com) of
  Alorium Technology (info@aloriumtech.com)
  Demonstrates usage of XLR8Float library and
@@ -41,7 +41,6 @@ struct statistics runstats_xlr8;
 
 void setup() {
   Serial.begin(115200);
-  //Serial.begin(9600);
 
   // Different random seeds
   randomSeed(1);

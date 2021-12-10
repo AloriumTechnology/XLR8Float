@@ -62,8 +62,9 @@
  #define XFMULT_CMD (2 | (1 << XFGO_BIT))
  #define XFDIV_CMD  (3 | (1 << XFGO_BIT))
  // status register bit positions
- #define XFDONE_BIT 7
- #define XFERROR_BIT 6
+#define XFAVRFP_BIT 7
+#define XFDONE_BIT 7
+#define XFERROR_BIT 6
 #endif
 
 #define INVERTSIGN() \
@@ -91,38 +92,55 @@
 );
 
 float __attribute__ ((noinline)) xlr8FloatAdd (float opa, float opb) {
-    // Becase operands were loaded before this function call, the
-    //  results are already done and we can immediately load
-    //  the result reg without waiting for the done status to set.
-    // Using assembly instead of C code to copy results because the compiled C
-    //  code ends up brining XFR* into r19:18 and then copying from
-    //  there to the output registers r25:22. Also, the compiler thinks
-    //  the data being copied from XFR* is integer data and we would
-    //  need to use a union or other trick to get it viewed as float for
-    //  the function return value
-    SENDXLR8CMD(XFADD_CMD)
-    COPYXLR8RESULT()
+  // Because operands were loaded before this function call, the
+  // results are already done and we can immediately load the result
+  // reg without waiting for the done status to set.  Using assembly
+  // instead of C code to copy results because the compiled C code
+  // ends up brining XFR* into r19:18 and then copying from there to
+  // the output registers r25:22. Also, the compiler thinks the data
+  // being copied from XFR* is integer data and we would need to use
+  // a union or other trick to get it viewed as float for the
+  // function return value
+  SENDXLR8CMD(XFADD_CMD)
+  COPYXLR8RESULT()
+  // Here we check bit 7 of the ctrl_reg and use normal AVR floating
+  // point if its set. This is really only being done to make the
+  // compiler think we need those operands in the function call. RThe
+  // hope is that the compiler will keep them in regs rather than
+  // storing them off to memory.
+  if (XFCTRL & _BV(XFAVRFP_BIT)) { // Trick the compiler to leave the operands in regs
+    return opa - opb; // Use the wrong operation for debug
+  }
 }
+
 float __attribute__ ((noinline)) xlr8FloatSub (float opa, float opb) {
   INVERTSIGN()  
-    // Give time for updated operand to propogate through function
-    __asm__ __volatile__ ("nop"  "\n\t" ::);
-    __asm__ __volatile__ ("nop"  "\n\t" ::);
-    SENDXLR8CMD(XFADD_CMD)
-    COPYXLR8RESULT()
+  // Give time for updated operand to propogate through function
+  __asm__ __volatile__ ("nop"  "\n\t" ::);
+  __asm__ __volatile__ ("nop"  "\n\t" ::);
+  SENDXLR8CMD(XFADD_CMD)
+  COPYXLR8RESULT()
+  if (XFCTRL & _BV(XFAVRFP_BIT)) { // Trick the compiler to leave the operands in regs
+    return opa + opb;  // Use the wrong operation for debug
+  }
 }
+
 float __attribute__ ((noinline)) xlr8FloatMult (float opa, float opb) {
-    SENDXLR8CMD(XFMULT_CMD)
-    COPYXLR8RESULT()
+  SENDXLR8CMD(XFMULT_CMD)
+  COPYXLR8RESULT()
+  if (XFCTRL & _BV(XFAVRFP_BIT)) { // Trick the compiler to leave the operands in regs
+    return opa + opb;  // Use the wrong operation for debug
+  }
 }
+
 float __attribute__ ((noinline)) xlr8FloatDiv (float opa, float opb) {
-    SENDXLR8CMD(XFDIV_CMD)
-    while (!(XFSTAT & _BV(XFDONE_BIT))); // div is slower, hang here until we're done
-    if (XFSTAT & _BV(XFERROR_BIT)) {
-      return opa / opb; // if no div unit, do it the slow old fashioned way
-    } else {
-      COPYXLR8RESULT()
-    }
+  SENDXLR8CMD(XFDIV_CMD)
+  while (!(XFSTAT & _BV(XFDONE_BIT))); // div is slower, hang here until we're done
+  if (XFSTAT & _BV(XFERROR_BIT)) {
+    return opa / opb; // if no div unit, do it the slow old fashioned way
+  } else {
+    COPYXLR8RESULT()
+  }
 }
 
 // Took idea from http://lolengine.net/blog/2011/3/20/understanding-fast-float-integer-conversions

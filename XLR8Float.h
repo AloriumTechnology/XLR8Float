@@ -1,7 +1,7 @@
 /*--------------------------------------------------------------------
- Copyright (c) 2015 Alorim Technology.  All right reserved.
+ Copyright (c) 2015 Alorium Technology.  All right reserved.
  This file is part of the Alorium Technology XLR8 Floating Point library.
- Written by Matt Weber (linkedin.com/in/mattweberdesign) of
+ Written by Matt Weber (support@aloriumtech.com) of
  Alorium Technology (info@aloriumtech.com)
 
  Uses the floating point hardware in Alorium Technology's XLR8 board
