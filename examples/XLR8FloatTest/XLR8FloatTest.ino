@@ -25,8 +25,8 @@ int randNumber;
 
 // Hold a set of statistics
 struct statistics {
-  float mean = 0.0;
-  float M2 = 0.0;
+  volatile float mean = 0.0;
+  volatile float M2 = 0.0;
   // float variance; // calculate as M2/(count-1) only when needed
   uint32_t count = 0;
   int   maximum = -32768;
@@ -143,7 +143,7 @@ int update_stats_float (int newval, struct statistics* stats) {
 }
 
 int update_stats_xlr8 (int newval, struct statistics* stats) {
-  float x, delta1,temp,delta2;
+  volatile float x, delta1,temp,delta2;
   TCNT1 = 0;
   if (newval > stats->maximum) {stats->maximum = newval;}
   if (newval < stats->minimum) {stats->minimum = newval;}
@@ -159,4 +159,3 @@ int update_stats_xlr8 (int newval, struct statistics* stats) {
   //variance = xlr8FloatDiv(M2,prevcount); // v=m2/t
   return TCNT1;
 }
-
